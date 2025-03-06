@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jewelry Invoice Generator</title>
+    <!-- Use CDN for more reliable library loading -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+
+<body class="bg-gray-100 p-6">
+    <div class="max-w-5xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-3xl font-bold text-center mb-8">Jewelry Invoice Generator</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Input Section -->
+            <div class="space-y-4">
+                <h2 class="text-xl font-semibold mb-4">Input Details</h2>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Party Name</label>
+                    <input type="text" id="partyName" class="w-full p-2 border rounded">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Gold Weight (grams)</label>
+                    <input type="number" id="goldWeight" class="w-full p-2 border rounded">
+                </div>
+
+                <!-- Dynamic Diamond Quality Section -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Diamond Details</label>
+                    <div id="diamondEntries" class="space-y-2">
+                        <div class="diamond-entry grid grid-cols-4 gap-2 items-center" id="diamond-entry-initial">
+                            <input type="text" placeholder="Quality" class="p-2 border rounded diamond-quality">
+                            <input type="number" step="0.001" placeholder="Weight"
+                                class="p-2 border rounded diamond-weight">
+                            <input type="number" placeholder="Rate" class="p-2 border rounded diamond-rate">
+                            <button onclick="removeDiamondEntry('diamond-entry-initial')"
+                                class="bg-red-500 text-white p-2 rounded hover:bg-red-600">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="addDiamondEntry()"
+                        class="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Add Diamond Quality
+                    </button>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Gold Rate (per gram)</label>
+                    <input type="number" id="goldRate" class="w-full p-2 border rounded">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Labour Rate (per gram)</label>
+                    <input type="number" id="labourRate" class="w-full p-2 border rounded">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Color Stone Weight (carats)</label>
+                    <input type="number" id="colorStoneWeight" class="w-full p-2 border rounded">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Color Stone Rate (per carat)</label>
+                    <input type="number" id="colorStoneRate" class="w-full p-2 border rounded">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium">Product Image</label>
+                    <input type="file" id="productImage" accept="image/*" class="w-full p-2 border rounded">
+                </div>
+
+                <div class="space-y-2">
+                    <button onclick="calculateInvoice()"
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+                        Generate Invoice
+                    </button>
+                    <button onclick="generatePDF()"
+                        class="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                        Download Invoice
+                    </button>
+                </div>
+            </div>
+
+            <!-- Invoice Preview Section -->
+            <div class="border p-6 rounded-lg">
+                <h2 class="text-xl font-semibold mb-4">Invoice Preview</h2>
+                <div id="previewImage" class="mb-4 h-48 bg-gray-200 flex items-center justify-center">
+                    <p class="text-gray-500">Product Image Preview</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div id="diamondCostsPreview" class="space-y-2">
+                        <!-- Diamond costs will be inserted here -->
+                    </div>
+
+                    <div class="flex justify-between">
+                        <span class="font-medium">Gold Cost (14KT):</span>
+                        <span id="goldCost14">₹0</span>
+                    </div>
+
+                    <div class="flex justify-between">
+                        <span class="font-medium">Gold Cost (18KT):</span>
+                        <span id="goldCost18">₹0</span>
+                    </div>
+
+                    <div class="flex justify-between">
+                        <span class="font-medium">Labour Cost:</span>
+                        <span id="labourCost">₹0</span>
+                    </div>
+
+                    <div class="flex justify-between">
+                        <span class="font-medium">Color Stone Cost:</span>
+                        <span id="colorStoneCost">₹0</span>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between font-bold">
+                            <span>Total Value (14KT):</span>
+                            <span id="totalValue14">₹0</span>
+                        </div>
+                        <div class="flex justify-between font-bold mt-2">
+                            <span>Total Value (18KT):</span>
+                            <span id="totalValue18">₹0</span>
+                        </div>
+                    </div>
+
+                    <!-- Notes Section -->
+                    <div class="mt-6 border-t pt-4">
+                        <h3 class="text-lg font-medium mb-2">Notes</h3>
+                        <textarea id="notes" class="w-full h-24 p-2 border rounded resize-none"
+                            placeholder="Enter any additional notes, terms, or conditions here..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Printable invoice template (hidden by default) -->
+        <div id="invoice-template" class="hidden bg-white p-8 max-w-4xl mx-auto">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold">Jewelry Quotation</h1>
+                <p id="invoice-date" class="text-gray-600">Date: </p>
+            </div>
+
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold mb-2">Party Details</h2>
+                <p id="invoice-party-name">Name: </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h2 class="text-lg font-semibold mb-2">Product Details</h2>
+                    <table class="w-full border-collapse">
+                        <tr class="bg-gray-100">
+                            <td class="border p-2">Gold Weight:</td>
+                            <td id="invoice-gold-weight" class="border p-2 text-right"></td>
+                        </tr>
+                        <tr>
+                            <td class="border p-2">Color Stone Weight:</td>
+                            <td id="invoice-stone-weight" class="border p-2 text-right"></td>
+                        </tr>
+                    </table>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold mb-2">Product Image</h2>
+                    <div id="invoice-image" class="border p-2 h-40 flex items-center justify-center bg-gray-100">
+                        <p class="text-gray-500">No Image</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold mb-2">Diamond Details</h2>
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border p-2 text-left">Quality</th>
+                            <th class="border p-2 text-right">Weight (ct)</th>
+                            <th class="border p-2 text-right">Rate</th>
+                            <th class="border p-2 text-right">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-diamond-rows">
+                        <!-- Diamond rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold mb-2">Cost Summary</h2>
+                <table class="w-full border-collapse">
+                    <tr class="bg-gray-100">
+                        <td class="border p-2">Gold Cost (14KT):</td>
+                        <td id="invoice-gold-cost-14" class="border p-2 text-right"></td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2">Gold Cost (18KT):</td>
+                        <td id="invoice-gold-cost-18" class="border p-2 text-right"></td>
+                    </tr>
+                    <tr class="bg-gray-100">
+                        <td class="border p-2">Labour Cost:</td>
+                        <td id="invoice-labour-cost" class="border p-2 text-right"></td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2">Color Stone Cost:</td>
+                        <td id="invoice-color-stone-cost" class="border p-2 text-right"></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="bg-gray-100 p-4 rounded mb-6">
+                <div class="flex justify-between mb-2">
+                    <span class="font-bold">Total Value (14KT):</span>
+                    <span id="invoice-total-14" class="font-bold"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-bold">Total Value (18KT):</span>
+                    <span id="invoice-total-18" class="font-bold"></span>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold mb-2">Additional Notes</h2>
+                <div id="invoice-notes" class="bg-gray-100 p-4 rounded min-h-16"></div>
+            </div>
+
+            <div class="text-center text-gray-500 text-sm mt-8">
+                <p>This is a computer-generated invoice. No signature required.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to add new diamond entry
+        function addDiamondEntry() {
+            const container = document.getElementById('diamondEntries');
+            const newEntry = document.createElement('div');
+            newEntry.className = 'diamond-entry grid grid-cols-4 gap-2 items-center';
+
+            // Create a unique ID for the new entry
+            const entryId = 'diamond-entry-' + Date.now();
+            newEntry.id = entryId;
+
+            newEntry.innerHTML = `
+                <input type="text" placeholder="Quality" class="p-2 border rounded diamond-quality">
+                <input type="number" step="0.001" placeholder="Weight" class="p-2 border rounded diamond-weight">
+                <input type="number" placeholder="Rate" class="p-2 border rounded diamond-rate">
+                <button onclick="removeDiamondEntry('${entryId}')" class="bg-red-500 text-white p-2 rounded hover:bg-red-600">
+                    Remove
+                </button>
+            `;
+
+            container.appendChild(newEntry);
+
+            // Add event listeners to new inputs for automatic calculation
+            const inputs = newEntry.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.addEventListener('input', calculateInvoice);
+            });
+        }
+
+        // Function to remove diamond entry
+        function removeDiamondEntry(entryId) {
+            const entry = document.getElementById(entryId);
+            if (entry) {
+                entry.remove();
+                calculateInvoice();
+            }
+        }
+
+        // Handle image upload
+        document.getElementById('productImage').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const previewDiv = document.getElementById('previewImage');
+                    previewDiv.innerHTML = `<img src="${e.target.result}" class="max-h-48 max-w-full object-contain">`;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Calculate invoice values
+        function calculateInvoice() {
+            const goldWeight = parseFloat(document.getElementById('goldWeight').value) || 0;
+            const goldRate = parseFloat(document.getElementById('goldRate').value) || 0;
+            const labourRate = parseFloat(document.getElementById('labourRate').value) || 0;
+            const colorStoneWeight = parseFloat(document.getElementById('colorStoneWeight').value) || 0;
+            const colorStoneRate = parseFloat(document.getElementById('colorStoneRate').value) || 0;
+
+            // Calculate diamond costs
+            let totalDiamondCost = 0;
+            const diamondCostsPreview = document.getElementById('diamondCostsPreview');
+            diamondCostsPreview.innerHTML = ''; // Clear previous entries
+
+            document.querySelectorAll('.diamond-entry').forEach((entry, index) => {
+                const quality = entry.querySelector('.diamond-quality').value;
+                const weight = parseFloat(entry.querySelector('.diamond-weight').value) || 0;
+                const rate = parseFloat(entry.querySelector('.diamond-rate').value) || 0;
+                const cost = weight * rate;
+                totalDiamondCost += cost;
+
+                // Add to preview
+                const div = document.createElement('div');
+                div.className = 'flex justify-between';
+                div.innerHTML = `
+                    <span class="font-medium">Diamond Cost (${quality || 'N/A'}):</span>
+                    <span>₹${cost.toLocaleString()}</span>
+                `;
+                diamondCostsPreview.appendChild(div);
+            });
+
+            // Calculate other costs
+            const goldCost14 = goldWeight * goldRate * 0.600;
+            const goldCost18 = goldWeight * goldRate * 0.760;
+            const labourCost = goldWeight * labourRate;
+            const colorStoneCost = colorStoneWeight * colorStoneRate;
+
+            // Calculate total values
+            const totalValue14 = totalDiamondCost + goldCost14 + labourCost + colorStoneCost;
+            const totalValue18 = totalDiamondCost + goldCost18 + labourCost + colorStoneCost;
+
+            // Update display
+            document.getElementById('goldCost14').textContent = `₹${goldCost14.toLocaleString()}`;
+            document.getElementById('goldCost18').textContent = `₹${goldCost18.toLocaleString()}`;
+            document.getElementById('labourCost').textContent = `₹${labourCost.toLocaleString()}`;
+            document.getElementById('colorStoneCost').textContent = `₹${colorStoneCost.toLocaleString()}`;
+            document.getElementById('totalValue14').textContent = `₹${totalValue14.toLocaleString()}`;
+            document.getElementById('totalValue18').textContent = `₹${totalValue18.toLocaleString()}`;
+        }
+
+        // Prepare the invoice template
+        function prepareInvoiceTemplate() {
+            // Set basic information
+            const date = new Date();
+            document.getElementById('invoice-date').textContent = `Date: ${date.toLocaleDateString()}`;
+            document.getElementById('invoice-party-name').textContent = `Name: ${document.getElementById('partyName').value || 'Customer'}`;
+            
+            // Set weights
+            document.getElementById('invoice-gold-weight').textContent = `${document.getElementById('goldWeight').value || '0'} grams`;
+            document.getElementById('invoice-stone-weight').textContent = `${document.getElementById('colorStoneWeight').value || '0'} carats`;
+            
+            // Set costs
+            document.getElementById('invoice-gold-cost-14').textContent = document.getElementById('goldCost14').textContent;
+            document.getElementById('invoice-gold-cost-18').textContent = document.getElementById('goldCost18').textContent;
+            document.getElementById('invoice-labour-cost').textContent = document.getElementById('labourCost').textContent;
+            document.getElementById('invoice-color-stone-cost').textContent = document.getElementById('colorStoneCost').textContent;
+            document.getElementById('invoice-total-14').textContent = document.getElementById('totalValue14').textContent;
+            document.getElementById('invoice-total-18').textContent = document.getElementById('totalValue18').textContent;
+            
+            // Set notes
+            document.getElementById('invoice-notes').textContent = document.getElementById('notes').value || 'No additional notes.';
+            
+            // Copy product image
+            const previewImage = document.getElementById('previewImage').querySelector('img');
+            const invoiceImage = document.getElementById('invoice-image');
+            if (previewImage) {
+                invoiceImage.innerHTML = `<img src="${previewImage.src}" class="max-h-36 max-w-full object-contain">`;
+            } else {
+                invoiceImage.innerHTML = `<p class="text-gray-500">No Image</p>`;
+            }
+            
+            // Populate diamond details
+            const diamondRows = document.getElementById('invoice-diamond-rows');
+            diamondRows.innerHTML = '';
+            
+            const diamondEntries = document.querySelectorAll('.diamond-entry');
+            if (diamondEntries.length > 0) {
+                diamondEntries.forEach(entry => {
+                    const quality = entry.querySelector('.diamond-quality').value || 'N/A';
+                    const weight = entry.querySelector('.diamond-weight').value || '0';
+                    const rate = entry.querySelector('.diamond-rate').value || '0';
+                    const cost = (parseFloat(weight) || 0) * (parseFloat(rate) || 0);
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border p-2">${quality}</td>
+                        <td class="border p-2 text-right">${weight}</td>
+                        <td class="border p-2 text-right">₹${parseFloat(rate).toLocaleString()}</td>
+                        <td class="border p-2 text-right">₹${cost.toLocaleString()}</td>
+                    `;
+                    diamondRows.appendChild(row);
+                });
+            } else {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="4" class="border p-2 text-center">No diamond details added</td>`;
+                diamondRows.appendChild(row);
+            }
+        }
+
+        // Generate PDF using jsPDF and html2canvas
+        function generatePDF() {
+            // First update the invoice template
+            prepareInvoiceTemplate();
+            
+            // Show template for capture
+            const template = document.getElementById('invoice-template');
+            template.classList.remove('hidden');
+            
+            // Set up PDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Capture the template as an image
+            html2canvas(template, {
+                scale: 2, // Higher scale for better quality
+                useCORS: true,
+                logging: false,
+                letterRendering: true
+            }).then(canvas => {
+                // Hide template again
+                template.classList.add('hidden');
+                
+                // Add the image to the PDF
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+                const imgX = (pageWidth - imgWidth * ratio) / 2;
+                const imgY = 0;
+                
+                doc.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+                
+                // Save the PDF
+                const partyName = document.getElementById('partyName').value || 'Customer';
+                const timestamp = new Date().toISOString().split('T')[0];
+                doc.save(`${partyName}-Jewelry-Quotation-${timestamp}.pdf`);
+            });
+        }
+
+        // Initialize with one diamond entry
+        calculateInvoice();
+
+        // Initialize all input fields with event listeners
+        document.querySelectorAll('input, textarea').forEach(input => {
+            input.addEventListener('input', calculateInvoice);
+        });
+    </script>
+</body>
+
+</html>
